@@ -15,13 +15,14 @@ Extracts, parses, and normalizes OBIS (*Object Identification System*) codes (`A
 * **Zero External Dependencies:** Built entirely with standard library Python (`dataclasses`, `re`, `string`, `typing`).
 * **Universal Ingestion:** Auto-detects and parses:
   * Canonical strings: `1-0:1.8.0`, `1-0:1.8.0*255`, `1-1:1.7.0`
+  * Shorthand display strings: `1.8.0`, `16.7.0`, `81.7.4` (defaults to electricity A=1, channel B=0)
   * Bare COSEM 12-hex: `0100010800ff`, `0100100700ff`, `010001080000` (F=0)
   * COSEM logical names with meter suffixes: `0100010800ff.1lgz0067285558.sm`
   * Dot-separated hex: `01.00.01.08.00.FF`
 * **Single Domain Model (`OBIS`):** Everything is accessed directly on the `OBIS` instance (`.canonical`, `.name`, `.slug`, `.placeholders`, `.decode()`).
 * **Channel & Tariff Qualifiers:** Treats Channel ($B \neq 0$) and Tariff ($1 \le E < 255$) as name qualifiers on $(C, D)$ base measurements.
 * **4-Variant Localization Slugs:** Generates variant slugs (`base`, `_channel`, `_tariff`, `_channel_tariff`) with placeholder maps, ready for Home Assistant, Prometheus, or UI localization.
-* **Curated Catalog:** 31 standard German electricity registers (DIN EN 62056-6-1 / DIN 43863-3) with units, device classes, state classes, and icons.
+* **Curated Catalog:** 39 standard German electricity registers (DIN EN 62056-6-1 / DIN 43863-3) with units, device classes, state classes, and icons.
 
 ---
 
@@ -49,12 +50,12 @@ from obis_parser import OBIS
 # Parses strings, bare-hex, dot-hex, or COSEM logical names
 obis = OBIS.parse("0100010800ff")
 if obis:
-    print(obis.canonical)      # "1-0:1.8.0" (or str(obis))
-    print(obis.name)           # "Active energy import"
-    print(obis.slug)           # "active_energy_import"
-    print(obis.is_electricity) # True
-    print(obis.channel)        # 0
-    print(obis.tariff)         # 0
+    print(obis.canonical)  # "1-0:1.8.0" (or str(obis))
+    print(obis.name)  # "Active energy import"
+    print(obis.slug)  # "active_energy_import"
+    print(obis.is_electricity)  # True
+    print(obis.channel)  # 0
+    print(obis.tariff)  # 0
 ```
 
 ### 2. Multi-Meter Channels & Tariffs
@@ -63,10 +64,10 @@ if obis:
 # Multi-meter behind one gateway (Channel 1, Tariff 2)
 obis = OBIS.parse("1-1:1.8.2")
 if obis:
-    print(obis.canonical)    # "1-1:1.8.2"
-    print(obis.name)         # "Active energy import (Channel 1, Tariff 2)"
-    print(obis.slug)         # "active_energy_import_channel_tariff"
-    print(obis.placeholders) # {"channel": "1", "tariff": "2"}
+    print(obis.canonical)  # "1-1:1.8.2"
+    print(obis.name)  # "Active energy import (Channel 1, Tariff 2)"
+    print(obis.slug)  # "active_energy_import_channel_tariff"
+    print(obis.placeholders)  # {"channel": "1", "tariff": "2"}
 ```
 
 ### 3. Full Metadata Decode (`obis.decode()`)
@@ -75,18 +76,18 @@ if obis:
 obis = OBIS.parse("0100200700ff")  # Voltage L1 (32.7.0)
 if obis:
     m = obis.decode()
-    print(m.name)         # "Voltage L1"
-    print(m.unit)         # "V"
-    print(m.device_class) # "voltage"
+    print(m.name)  # "Voltage L1"
+    print(m.unit)  # "V"
+    print(m.device_class)  # "voltage"
     print(m.state_class)  # "measurement"
-    print(m.icon)         # "mdi:sine-wave"
+    print(m.icon)  # "mdi:sine-wave"
 ```
 
 ---
 
 ## Supported Registers (Catalog Overview)
 
-| (C, D) | Measurement | Slug | Unit | Device Class | State Class |
+| (C, D, E) | Measurement | Slug | Unit | Device Class | State Class |
 |---|---|---|---|---|---|
 | **(1, 8)** | Active energy import | `active_energy_import` | `kWh` | `energy` | `total_increasing` |
 | **(2, 8)** | Active energy export | `active_energy_export` | `kWh` | `energy` | `total_increasing` |
@@ -109,6 +110,11 @@ if obis:
 | **(11, 7)** | Current (neutral/total) | `current` | `A` | `current` | `measurement` |
 | **(13, 7)** | Power factor ($\cos \varphi$) | `power_factor` | `None` | `power_factor` | `measurement` |
 | **(14, 7)** | Frequency | `frequency` | `Hz` | `frequency` | `measurement` |
+| **(81, 7, 0)** | Phase angle | `phase_angle` | `°` | `None` | `measurement` |
+| **(81, 7, 1/2)** | Phase angle U(L2)/U(L3) to U(L1) | `phase_angle_u_l2..3_l1` | `°` | `None` | `measurement` |
+| **(81, 7, 4/15/26)** | Phase angle L1/L2/L3 (U to I) | `phase_angle_l1..3` | `°` | `None` | `measurement` |
+| **(0, 2)** | Firmware version | `firmware_version` | `None` | `None` | `None` |
+| **(96, 1)** | Meter identification / Serial | `meter_identification` | `None` | `None` | `None` |
 
 ---
 

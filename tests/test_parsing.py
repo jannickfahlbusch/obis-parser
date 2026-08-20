@@ -24,6 +24,15 @@ class TestParseObis:
             # Logical name with meter suffix
             ("0100010800ff.1test000000001.sm", OBIS(1, 0, 1, 8, 0, 255)),
             ("0100200700ff.1lgz0067285558.sm", OBIS(1, 0, 32, 7, 0, 255)),
+            # Shorthand 3-group notation (defaults to electricity A=1, channel B=0)
+            ("1.8.0", OBIS(1, 0, 1, 8, 0, None)),
+            ("1.8.0*255", OBIS(1, 0, 1, 8, 0, 255)),
+            ("16.7.0", OBIS(1, 0, 16, 7, 0, None)),
+            ("81.7.4", OBIS(1, 0, 81, 7, 4, None)),
+            ("0.2.0", OBIS(1, 0, 0, 2, 0, None)),
+            ("96.1.0", OBIS(1, 0, 96, 1, 0, None)),
+            (" 1.8.0 ", OBIS(1, 0, 1, 8, 0, None)),
+            ("1.8.0 * 255", OBIS(1, 0, 1, 8, 0, 255)),
             # Spaces
             (" 1-0:1.8.0 ", OBIS(1, 0, 1, 8, 0, None)),
             ("1-0:1.8.0 * 255", OBIS(1, 0, 1, 8, 0, 255)),

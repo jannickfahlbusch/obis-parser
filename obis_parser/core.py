@@ -2,7 +2,7 @@
 
 This module is dependency-free (standard library only) and provides:
 - Object-oriented `OBIS` domain class with `OBIS.parse()`, canonicalization, and metadata.
-- Full catalog of 31 German smart meter electricity registers (IEC 62056-6-1 / DIN 43863-3).
+- Full catalog of 39 German smart meter electricity registers (IEC 62056-6-1 / DIN 43863-3).
 - Resolved measurement metadata via `obis.decode()` with 4-variant localization slugs.
 """
 
@@ -15,6 +15,7 @@ from typing import Literal
 
 _HEXDIGITS = set(hexdigits)
 _OBIS_STRING_RE = re.compile(r"^(\d+)\s*-\s*(\d+)\s*:\s*(\d+)\s*\.\s*(\d+)\s*\.\s*(\d+)(?:\s*\*\s*(\d+))?$")
+_OBIS_SHORT_STRING_RE = re.compile(r"^(\d+)\s*\.\s*(\d+)\s*\.\s*(\d+)(?:\s*\*\s*(\d+))?$")
 _OBIS_DOT_HEX_RE = re.compile(
     r"^([0-9a-fA-F]{2})\.([0-9a-fA-F]{2})\.([0-9a-fA-F]{2})\."
     r"([0-9a-fA-F]{2})\.([0-9a-fA-F]{2})\.([0-9a-fA-F]{2})$"
@@ -57,10 +58,11 @@ ELECTRICITY_MEDIUM = 1
 #: F (billing period) values meaning "current period": absent, 0, or 255.
 _CURRENT_PERIOD_F = (0, 255)
 
-#: A measurement's identity: the (C, D) OBIS value groups — C is the physical
-#: quantity, D the measurement/processing type (IEC 62056-6-1). The channel (B)
-#: and tariff (E) fields are qualifiers and are NOT part of this key.
-type MeasurementKey = tuple[OBISPhysicalQuantity, OBISMeasurementType]
+#: A measurement's identity: either the (C, D) OBIS value groups or an exact (C, D, E)
+#: triplet for registers where E represents a specific phase/angle (e.g. phase angles 81.7.x).
+type MeasurementKey = (
+    tuple[OBISPhysicalQuantity, OBISMeasurementType] | tuple[OBISPhysicalQuantity, OBISMeasurementType, OBISTariff]
+)
 
 
 @dataclass(frozen=True)
@@ -95,6 +97,16 @@ class OBIS:
                 d=int(match.group(4)),
                 e=int(match.group(5)),
                 f=int(match.group(6)) if match.group(6) is not None else None,
+            )
+
+        if match := _OBIS_SHORT_STRING_RE.match(code):
+            return cls(
+                a=ELECTRICITY_MEDIUM,
+                b=0,
+                c=int(match.group(1)),
+                d=int(match.group(2)),
+                e=int(match.group(3)),
+                f=int(match.group(4)) if match.group(4) is not None else None,
             )
 
         if match := _OBIS_DOT_HEX_RE.match(code):
@@ -488,16 +500,51 @@ OBIS_CATALOG: dict[MeasurementKey, OBISMeasurementInfo] = {
         2,
     ),
     (14, 7): OBISMeasurementInfo("Frequency", "frequency", "frequency", "measurement", "Hz", "mdi:sine-wave", 2),
+    # Phase angles (C=81, D=7)
+    (81, 7, 0): OBISMeasurementInfo("Phase angle", "phase_angle", None, "measurement", "°", "mdi:angle-acute", 1),
+    (81, 7, 1): OBISMeasurementInfo(
+        "Phase angle U(L2)-U(L1)", "phase_angle_u_l2_l1", None, "measurement", "°", "mdi:angle-acute", 1
+    ),
+    (81, 7, 2): OBISMeasurementInfo(
+        "Phase angle U(L3)-U(L1)", "phase_angle_u_l3_l1", None, "measurement", "°", "mdi:angle-acute", 1
+    ),
+    (81, 7, 4): OBISMeasurementInfo("Phase angle L1", "phase_angle_l1", None, "measurement", "°", "mdi:angle-acute", 1),
+    (81, 7, 15): OBISMeasurementInfo(
+        "Phase angle L2", "phase_angle_l2", None, "measurement", "°", "mdi:angle-acute", 1
+    ),
+    (81, 7, 26): OBISMeasurementInfo(
+        "Phase angle L3", "phase_angle_l3", None, "measurement", "°", "mdi:angle-acute", 1
+    ),
+    # Device metadata & identification
+    (0, 2): OBISMeasurementInfo(
+        "Firmware version",
+        "firmware_version",
+        None,
+        None,
+        None,
+        "mdi:chip",
+    ),
+    (96, 1): OBISMeasurementInfo(
+        "Meter identification",
+        "meter_identification",
+        None,
+        None,
+        None,
+        "mdi:identifier",
+    ),
 }
 
 
 def _get_obis_info(obis: OBIS) -> OBISMeasurementInfo | None:
-    """Look up measurement metadata from the catalog by (C, D)."""
+    """Look up measurement metadata from the catalog by (C, D, E) or (C, D)."""
     if not obis.is_electricity:
         return None
 
     if obis.f is not None and obis.f not in _CURRENT_PERIOD_F:
         return None
+
+    if info := OBIS_CATALOG.get((obis.c, obis.d, obis.e)):
+        return info
 
     return OBIS_CATALOG.get((obis.c, obis.d))
 
@@ -518,7 +565,8 @@ def _describe_obis(obis: OBIS, info: OBISMeasurementInfo | None) -> OBISNameDesc
         )
 
     has_channel = obis.b != 0
-    has_tariff = _has_tariff(obis.e)
+    is_exact_e = (obis.c, obis.d, obis.e) in OBIS_CATALOG
+    has_tariff = not is_exact_e and _has_tariff(obis.e)
 
     placeholders: dict[str, str] = {}
     fallback = info.name

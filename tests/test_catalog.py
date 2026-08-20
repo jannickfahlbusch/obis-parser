@@ -10,7 +10,7 @@ from obis_parser import (
 
 class TestCatalog:
     def test_catalog_size_and_uniqueness(self) -> None:
-        assert len(OBIS_CATALOG) == 31
+        assert len(OBIS_CATALOG) == 39
         slugs = [info.slug for info in OBIS_CATALOG.values()]
         assert len(slugs) == len(set(slugs)), "All catalog slugs must be unique"
         assert all(slug for slug in slugs), "Catalog slugs must not be empty"
@@ -33,6 +33,14 @@ class TestCatalog:
             ("1-0:3.8.0", (3, 8), "reactive_energy_import"),
             ("1-0:4.8.0", (4, 8), "reactive_energy_export"),
             ("1-0:9.8.0", (9, 8), "apparent_energy"),
+            ("1-0:81.7.0", (81, 7), "phase_angle"),
+            ("1-0:81.7.1", (81, 7), "phase_angle_u_l2_l1"),
+            ("1-0:81.7.2", (81, 7), "phase_angle_u_l3_l1"),
+            ("1-0:81.7.4", (81, 7), "phase_angle_l1"),
+            ("1-0:81.7.15", (81, 7), "phase_angle_l2"),
+            ("1-0:81.7.26", (81, 7), "phase_angle_l3"),
+            ("1-0:0.2.0", (0, 2), "firmware_version"),
+            ("1-0:96.1.0", (96, 1), "meter_identification"),
         ],
     )
     def test_catalog_entries(self, code: str, expected_cd: tuple[int, int], expected_slug: str) -> None:

@@ -51,6 +51,33 @@ class TestOBISDecode:
         assert m.canonical == "1-0:16.7.0"
         assert m.slug == "active_power_total"
 
+    def test_decode_phase_angles(self) -> None:
+        obis = OBIS.parse("1-0:81.7.4")
+        assert obis is not None
+        m = obis.decode()
+        assert (m.slug, m.name, m.unit, m.icon) == ("phase_angle_l1", "Phase angle L1", "°", "mdi:angle-acute")
+
+    def test_decode_phase_angle_with_channel(self) -> None:
+        obis = OBIS.parse("1-1:81.7.4")
+        assert obis is not None
+        m = obis.decode()
+        assert (m.slug, m.name, m.placeholders) == (
+            "phase_angle_l1_channel",
+            "Phase angle L1 (Channel 1)",
+            {"channel": "1"},
+        )
+
+    def test_decode_device_metadata(self) -> None:
+        obis_fw = OBIS.parse("1-0:0.2.0")
+        assert obis_fw is not None
+        m_fw = obis_fw.decode()
+        assert (m_fw.slug, m_fw.name, m_fw.icon) == ("firmware_version", "Firmware version", "mdi:chip")
+
+        obis_id = OBIS.parse("1-0:96.1.0")
+        assert obis_id is not None
+        m_id = obis_id.decode()
+        assert (m_id.slug, m_id.name, m_id.icon) == ("meter_identification", "Meter identification", "mdi:identifier")
+
     def test_decode_unknown_code(self) -> None:
         obis = OBIS.parse("1-0:99.99.99")
         assert obis is not None
