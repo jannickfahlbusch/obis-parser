@@ -113,8 +113,8 @@ if obis:
 | **(81, 7, 0)** | Phase angle | `phase_angle` | `°` | `None` | `measurement` |
 | **(81, 7, 1/2)** | Phase angle U(L2)/U(L3) to U(L1) | `phase_angle_u_l2..3_l1` | `°` | `None` | `measurement` |
 | **(81, 7, 4/15/26)** | Phase angle L1/L2/L3 (U to I) | `phase_angle_l1..3` | `°` | `None` | `measurement` |
-| **(0, 2)** | Firmware version | `firmware_version` | `None` | `None` | `None` |
-| **(96, 1)** | Meter identification / Serial | `meter_identification` | `None` | `None` | `None` |
+| **(0, 2, 0)** | Firmware version | `firmware_version` | `None` | `None` | `None` |
+| **(96, 1, 0)** | Meter identification / Serial | `meter_identification` | `None` | `None` | `None` |
 
 ---
 

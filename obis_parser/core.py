@@ -259,7 +259,7 @@ class OBISNameDescriptor:
 
 @dataclass(frozen=True)
 class OBISMeasurement:
-    """A fully-resolved OBIS measurement with values, units, and localized metadata."""
+    """A fully-resolved OBIS measurement descriptor with units, device classes, and localized metadata."""
 
     code: OBIS
     canonical: str
@@ -515,8 +515,8 @@ OBIS_CATALOG: dict[MeasurementKey, OBISMeasurementInfo] = {
     (81, 7, 26): OBISMeasurementInfo(
         "Phase angle L3", "phase_angle_l3", None, "measurement", "°", "mdi:angle-acute", 1
     ),
-    # Device metadata & identification
-    (0, 2): OBISMeasurementInfo(
+    # Device metadata & identification (exact E=0)
+    (0, 2, 0): OBISMeasurementInfo(
         "Firmware version",
         "firmware_version",
         None,
@@ -524,7 +524,7 @@ OBIS_CATALOG: dict[MeasurementKey, OBISMeasurementInfo] = {
         None,
         "mdi:chip",
     ),
-    (96, 1): OBISMeasurementInfo(
+    (96, 1, 0): OBISMeasurementInfo(
         "Meter identification",
         "meter_identification",
         None,
