@@ -2,7 +2,11 @@
 
 import pytest
 
-from obis_parser import OBIS
+from obis_parser import (
+    OBIS,
+    OBISMeasurement,
+    OBISNameDescriptor,
+)
 
 
 class TestOBISDecode:
@@ -53,27 +57,52 @@ class TestOBISDecode:
         assert m.placeholders == expected_placeholders
         assert m.info is not None
 
-    def test_decode_metadata_fields_populated(self) -> None:
-        """Verify fully-resolved measurement metadata fields."""
-        m_energy = OBIS.parse("1-0:1.8.0").decode()  # type: ignore[union-attr]
-        assert m_energy.unit == "kWh"
-        assert m_energy.device_class == "energy"
-        assert m_energy.state_class == "total_increasing"
-        assert m_energy.icon == "mdi:home-import-outline"
-        assert m_energy.suggested_display_precision == 5
+    def test_decode_direct_dataclass_comparison(self) -> None:
+        """Verify OBISMeasurement dataclass construction directly."""
+        obis = OBIS(1, 0, 1, 8, 0)
+        assert obis.decode() == OBISMeasurement(
+            code=obis,
+            canonical="1-0:1.8.0",
+            slug="active_energy_import",
+            name="Active energy import",
+            unit="kWh",
+            device_class="energy",
+            state_class="total_increasing",
+            icon="mdi:home-import-outline",
+            suggested_display_precision=5,
+            placeholders={},
+            info=obis.info,
+        )
 
-        m_angle = OBIS.parse("1-0:81.7.4").decode()  # type: ignore[union-attr]
-        assert m_angle.unit == "°"
-        assert m_angle.device_class is None
-        assert m_angle.state_class == "measurement"
-        assert m_angle.icon == "mdi:angle-acute"
-        assert m_angle.suggested_display_precision == 1
+        obis_angle = OBIS(1, 0, 81, 7, 4)
+        assert obis_angle.decode() == OBISMeasurement(
+            code=obis_angle,
+            canonical="1-0:81.7.4",
+            slug="phase_angle_l1",
+            name="Phase angle L1",
+            unit="°",
+            device_class=None,
+            state_class="measurement",
+            icon="mdi:angle-acute",
+            suggested_display_precision=1,
+            placeholders={},
+            info=obis_angle.info,
+        )
 
-        m_fw = OBIS.parse("1-0:0.2.0").decode()  # type: ignore[union-attr]
-        assert m_fw.unit is None
-        assert m_fw.device_class is None
-        assert m_fw.state_class is None
-        assert m_fw.icon == "mdi:chip"
+        obis_fw = OBIS(1, 0, 0, 2, 0)
+        assert obis_fw.decode() == OBISMeasurement(
+            code=obis_fw,
+            canonical="1-0:0.2.0",
+            slug="firmware_version",
+            name="Firmware version",
+            unit=None,
+            device_class=None,
+            state_class=None,
+            icon="mdi:chip",
+            suggested_display_precision=None,
+            placeholders={},
+            info=obis_fw.info,
+        )
 
     @pytest.mark.parametrize(
         ("short_code", "canonical_code"),
@@ -121,42 +150,43 @@ class TestOBISDecode:
 
 class TestOBISNaming:
     @pytest.mark.parametrize(
-        ("code", "expected_slug", "expected_name", "expected_placeholders"),
+        ("code", "expected"),
         [
-            ("1-0:32.7.0", "voltage_l1", "Voltage L1", {}),
+            (
+                "1-0:32.7.0",
+                OBISNameDescriptor(
+                    slug="voltage_l1",
+                    placeholders={},
+                    fallback_name="Voltage L1",
+                ),
+            ),
             (
                 "1-2:1.8.5",
-                "active_energy_import_channel_tariff",
-                "Active energy import (Channel 2, Tariff 5)",
-                {"channel": "2", "tariff": "5"},
+                OBISNameDescriptor(
+                    slug="active_energy_import_channel_tariff",
+                    placeholders={"channel": "2", "tariff": "5"},
+                    fallback_name="Active energy import (Channel 2, Tariff 5)",
+                ),
             ),
             (
                 "1-1:81.7.4",
-                "phase_angle_l1_channel",
-                "Phase angle L1 (Channel 1)",
-                {"channel": "1"},
+                OBISNameDescriptor(
+                    slug="phase_angle_l1_channel",
+                    placeholders={"channel": "1"},
+                    fallback_name="Phase angle L1 (Channel 1)",
+                ),
             ),
         ],
     )
     def test_describe_and_naming_properties(
         self,
         code: str,
-        expected_slug: str,
-        expected_name: str,
-        expected_placeholders: dict[str, str],
+        expected: OBISNameDescriptor,
     ) -> None:
         obis = OBIS.parse(code)
         assert obis is not None
-
-        # Object properties
-        assert obis.name == expected_name
-        assert obis.slug == expected_slug
-        assert obis.translation_key == expected_slug
-        assert obis.placeholders == expected_placeholders
-
-        # describe() method
-        d = obis.describe()
-        assert d.slug == expected_slug
-        assert d.translation_key == expected_slug
-        assert d.placeholders == expected_placeholders
-        assert d.fallback_name == expected_name
+        assert obis.describe() == expected
+        assert obis.name == expected.fallback_name
+        assert obis.slug == expected.slug
+        assert obis.translation_key == expected.translation_key
+        assert obis.placeholders == expected.placeholders

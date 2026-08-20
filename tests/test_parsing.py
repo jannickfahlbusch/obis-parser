@@ -110,47 +110,37 @@ class TestOBISProperties:
             (OBIS(1, 0, 1, 8, 0, None), "1-0:1.8.0"),
             (OBIS(1, 1, 16, 7, 0, None), "1-1:16.7.0"),
             (OBIS(1, 0, 81, 7, 4, None), "1-0:81.7.4"),
-        ],
-    )
-    def test_string_representations(self, obis: OBIS, expected_str: str) -> None:
-        assert str(obis) == expected_str
-        assert obis.canonical == expected_str
-        assert obis.to_obis_string() == expected_str
-
-    @pytest.mark.parametrize(
-        ("obis", "expected_str"),
-        [
             (OBIS(1, 0, 1, 8, 0, 255), "1-0:1.8.0"),
             (OBIS(1, 0, 1, 8, 0, 0), "1-0:1.8.0"),
             (OBIS(1, 0, 1, 8, 0, 1), "1-0:1.8.0*1"),
             (OBIS(1, 0, 81, 7, 4, 1), "1-0:81.7.4*1"),
         ],
     )
-    def test_f_suppression(self, obis: OBIS, expected_str: str) -> None:
+    def test_string_representations_and_f_suppression(self, obis: OBIS, expected_str: str) -> None:
         assert str(obis) == expected_str
+        assert obis.canonical == expected_str
+        assert obis.to_obis_string() == expected_str
 
-    @pytest.mark.parametrize(
-        ("obis", "expected_props"),
-        [
-            (OBIS(1, 2, 1, 8, 3, 255), (True, 1, 2, 1, 8, 3, 255)),
-            (OBIS(7, 0, 3, 0, 0, None), (False, 7, 0, 3, 0, 0, None)),
-            (OBIS(1, 0, 81, 7, 4, 1), (True, 1, 0, 81, 7, 4, 1)),
-        ],
-    )
-    def test_convenience_properties(
-        self,
-        obis: OBIS,
-        expected_props: tuple[bool, int, int, int, int, int, int | None],
-    ) -> None:
+    def test_convenience_property_aliases(self) -> None:
+        """Verify property aliases mirror positional fields."""
+        obis = OBIS(1, 2, 3, 4, 5, 6)
+        assert obis.is_electricity is True
         assert (
-            obis.is_electricity,
-            obis.medium,
-            obis.channel,
-            obis.physical_quantity,
-            obis.measurement_type,
-            obis.tariff,
-            obis.billing_period,
-        ) == expected_props
+            (
+                obis.medium,
+                obis.channel,
+                obis.physical_quantity,
+                obis.measurement_type,
+                obis.tariff,
+                obis.billing_period,
+            )
+            == (obis.a, obis.b, obis.c, obis.d, obis.e, obis.f)
+            == (1, 2, 3, 4, 5, 6)
+        )
+
+        gas = OBIS(7, 0, 3, 0, 0, None)
+        assert gas.is_electricity is False
+        assert gas.medium == gas.a == 7
 
     @pytest.mark.parametrize(
         ("raw", "expected_canonical"),
