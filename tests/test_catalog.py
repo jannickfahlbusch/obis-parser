@@ -40,41 +40,16 @@ class TestCatalog:
     @pytest.mark.parametrize(
         "code",
         [
-            "2-0:1.8.0",
-            "7-0:3.0.0",
-            "2-0:81.7.4",
+            "2-0:1.8.0",  # Medium != 1
+            "7-0:3.0.0",  # Gas
+            "1-0:1.8.0*1",  # Historic billing period
+            "1-0:81.7.99",  # Uncataloged phase angle E
+            "1-0:0.2.1",  # Uncataloged metadata E
+            "1-0:96.1.1",  # Uncataloged serial E
         ],
     )
-    def test_non_electricity_has_no_catalog_match(self, code: str) -> None:
-        """Non-electricity medium (A != 1) must never match catalog."""
-        obis = OBIS.parse(code)
-        assert obis is not None
-        assert obis.info is None
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            "1-0:1.8.0",
-            "1-0:1.8.0*0",
-            "1-0:1.8.0*255",
-            "1-0:81.7.4*255",
-        ],
-    )
-    def test_current_billing_periods_match_catalog(self, code: str) -> None:
-        """Current billing periods (F=None, 0, 255) resolve catalog metadata."""
-        obis = OBIS.parse(code)
-        assert obis is not None
-        assert obis.info is not None
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            "1-0:1.8.0*1",
-            "1-0:81.7.4*1",
-        ],
-    )
-    def test_historic_billing_periods_do_not_match_catalog(self, code: str) -> None:
-        """Historic billing periods (F > 0 and != 255) return info=None."""
+    def test_unmatched_codes_return_none(self, code: str) -> None:
+        """Non-electricity, historic periods, and uncataloged exact E return info=None."""
         obis = OBIS.parse(code)
         assert obis is not None
         assert obis.info is None
@@ -87,6 +62,9 @@ class TestCatalog:
             ("1-1:1.8.0", "active_energy_import"),
             ("1-0:1.8.1", "active_energy_import"),
             ("1-2:1.8.3", "active_energy_import"),
+            # Current billing periods (F=None, 0, 255) resolve base info
+            ("1-0:1.8.0*0", "active_energy_import"),
+            ("1-0:1.8.0*255", "active_energy_import"),
             # Exact (C, D, E) lookups for phase angles and device metadata
             ("1-0:81.7.4", "phase_angle_l1"),
             ("1-1:81.7.4", "phase_angle_l1"),
@@ -101,18 +79,3 @@ class TestCatalog:
         info = obis.info
         assert info is not None
         assert info.slug == expected_slug
-
-    @pytest.mark.parametrize(
-        "code",
-        [
-            "1-0:81.7.99",
-            "81.7.99",
-            "1-0:0.2.1",
-            "1-0:96.1.1",
-        ],
-    )
-    def test_uncataloged_group_e_for_exact_registers_returns_none(self, code: str) -> None:
-        """Uncataloged E for exact registers (C=81, C=0, C=96) returns info=None."""
-        obis = OBIS.parse(code)
-        assert obis is not None
-        assert obis.info is None

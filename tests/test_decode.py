@@ -9,59 +9,129 @@ from obis_parser import (
 )
 
 
-class TestOBISDecode:
+class TestOBISNaming:
     @pytest.mark.parametrize(
-        ("code", "expected_slug", "expected_name", "expected_placeholders"),
+        ("code", "expected"),
         [
             # Base register without modifiers
-            ("1-0:1.8.0", "active_energy_import", "Active energy import", {}),
+            (
+                "1-0:1.8.0",
+                OBISNameDescriptor(
+                    slug="active_energy_import",
+                    placeholders={},
+                    fallback_name="Active energy import",
+                ),
+            ),
             # Channel modifier on base register
-            ("1-1:1.7.0", "active_power_import_channel", "Active power import (Channel 1)", {"channel": "1"}),
+            (
+                "1-1:1.7.0",
+                OBISNameDescriptor(
+                    slug="active_power_import_channel",
+                    placeholders={"channel": "1"},
+                    fallback_name="Active power import (Channel 1)",
+                ),
+            ),
             # Tariff modifier on base register
-            ("1-0:1.8.2", "active_energy_import_tariff", "Active energy import (Tariff 2)", {"tariff": "2"}),
+            (
+                "1-0:1.8.2",
+                OBISNameDescriptor(
+                    slug="active_energy_import_tariff",
+                    placeholders={"tariff": "2"},
+                    fallback_name="Active energy import (Tariff 2)",
+                ),
+            ),
             # Channel + tariff on base register
             (
                 "1-3:1.8.4",
-                "active_energy_import_channel_tariff",
-                "Active energy import (Channel 3, Tariff 4)",
-                {"channel": "3", "tariff": "4"},
+                OBISNameDescriptor(
+                    slug="active_energy_import_channel_tariff",
+                    placeholders={"channel": "3", "tariff": "4"},
+                    fallback_name="Active energy import (Channel 3, Tariff 4)",
+                ),
             ),
             # Tariff E=255 means total/unspecified (no tariff suffix)
-            ("1-0:1.8.255", "active_energy_import", "Active energy import", {}),
+            (
+                "1-0:1.8.255",
+                OBISNameDescriptor(
+                    slug="active_energy_import",
+                    placeholders={},
+                    fallback_name="Active energy import",
+                ),
+            ),
             # Exact (C, D, E) phase angle registers
-            ("1-0:81.7.0", "phase_angle", "Phase angle", {}),
-            ("1-0:81.7.1", "phase_angle_u_l2_l1", "Phase angle U(L2)-U(L1)", {}),
-            ("1-0:81.7.4", "phase_angle_l1", "Phase angle L1", {}),
-            # Channel on exact (C, D, E) register (must NOT generate a tariff suffix!)
-            ("1-1:81.7.4", "phase_angle_l1_channel", "Phase angle L1 (Channel 1)", {"channel": "1"}),
+            (
+                "1-0:81.7.0",
+                OBISNameDescriptor(
+                    slug="phase_angle",
+                    placeholders={},
+                    fallback_name="Phase angle",
+                ),
+            ),
+            (
+                "1-0:81.7.1",
+                OBISNameDescriptor(
+                    slug="phase_angle_u_l2_l1",
+                    placeholders={},
+                    fallback_name="Phase angle U(L2)-U(L1)",
+                ),
+            ),
+            (
+                "1-0:81.7.4",
+                OBISNameDescriptor(
+                    slug="phase_angle_l1",
+                    placeholders={},
+                    fallback_name="Phase angle L1",
+                ),
+            ),
+            # Channel on exact (C, D, E) register (must NOT generate tariff suffix!)
+            (
+                "1-1:81.7.4",
+                OBISNameDescriptor(
+                    slug="phase_angle_l1_channel",
+                    placeholders={"channel": "1"},
+                    fallback_name="Phase angle L1 (Channel 1)",
+                ),
+            ),
             # Exact (C, D, E) device metadata registers
-            ("1-0:0.2.0", "firmware_version", "Firmware version", {}),
-            ("1-0:96.1.0", "meter_identification", "Meter identification", {}),
+            (
+                "1-0:0.2.0",
+                OBISNameDescriptor(
+                    slug="firmware_version",
+                    placeholders={},
+                    fallback_name="Firmware version",
+                ),
+            ),
+            (
+                "1-0:96.1.0",
+                OBISNameDescriptor(
+                    slug="meter_identification",
+                    placeholders={},
+                    fallback_name="Meter identification",
+                ),
+            ),
         ],
     )
-    def test_decode_naming_and_slug_patterns(
+    def test_describe_and_naming_properties(
         self,
         code: str,
-        expected_slug: str,
-        expected_name: str,
-        expected_placeholders: dict[str, str],
+        expected: OBISNameDescriptor,
     ) -> None:
         """Verify naming, slug variants, and placeholders across all qualifier patterns."""
         obis = OBIS.parse(code)
         assert obis is not None
-        m = obis.decode()
-        assert m.canonical == code
-        assert m.slug == expected_slug
-        assert m.translation_key == expected_slug
-        assert m.name == expected_name
-        assert m.placeholders == expected_placeholders
-        assert m.info is not None
+        assert obis.describe() == expected
+        assert obis.name == expected.fallback_name
+        assert obis.slug == expected.slug
+        assert obis.translation_key == expected.translation_key
+        assert obis.placeholders == expected.placeholders
 
+
+class TestOBISDecode:
     def test_decode_direct_dataclass_comparison(self) -> None:
-        """Verify OBISMeasurement dataclass construction directly."""
-        obis = OBIS(1, 0, 1, 8, 0)
-        assert obis.decode() == OBISMeasurement(
-            code=obis,
+        """Verify fully-resolved OBISMeasurement dataclass construction directly."""
+        obis_energy = OBIS(1, 0, 1, 8, 0)
+        assert obis_energy.decode() == OBISMeasurement(
+            code=obis_energy,
             canonical="1-0:1.8.0",
             slug="active_energy_import",
             name="Active energy import",
@@ -71,7 +141,7 @@ class TestOBISDecode:
             icon="mdi:home-import-outline",
             suggested_display_precision=5,
             placeholders={},
-            info=obis.info,
+            info=obis_energy.info,
         )
 
         obis_angle = OBIS(1, 0, 81, 7, 4)
@@ -146,47 +216,3 @@ class TestOBISDecode:
         assert m.info is None
         assert m.unit is None
         assert m.icon == "mdi:gauge"
-
-
-class TestOBISNaming:
-    @pytest.mark.parametrize(
-        ("code", "expected"),
-        [
-            (
-                "1-0:32.7.0",
-                OBISNameDescriptor(
-                    slug="voltage_l1",
-                    placeholders={},
-                    fallback_name="Voltage L1",
-                ),
-            ),
-            (
-                "1-2:1.8.5",
-                OBISNameDescriptor(
-                    slug="active_energy_import_channel_tariff",
-                    placeholders={"channel": "2", "tariff": "5"},
-                    fallback_name="Active energy import (Channel 2, Tariff 5)",
-                ),
-            ),
-            (
-                "1-1:81.7.4",
-                OBISNameDescriptor(
-                    slug="phase_angle_l1_channel",
-                    placeholders={"channel": "1"},
-                    fallback_name="Phase angle L1 (Channel 1)",
-                ),
-            ),
-        ],
-    )
-    def test_describe_and_naming_properties(
-        self,
-        code: str,
-        expected: OBISNameDescriptor,
-    ) -> None:
-        obis = OBIS.parse(code)
-        assert obis is not None
-        assert obis.describe() == expected
-        assert obis.name == expected.fallback_name
-        assert obis.slug == expected.slug
-        assert obis.translation_key == expected.translation_key
-        assert obis.placeholders == expected.placeholders
