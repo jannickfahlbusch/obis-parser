@@ -30,10 +30,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage   = "https://github.com/jannickfahlbusch/obis-parser"
-Repository = "https://github.com/jannickfahlbusch/obis-parser"
-Issues     = "https://github.com/jannickfahlbusch/obis-parser/issues"
-Changelog  = "https://github.com/jannickfahlbusch/obis-parser/blob/main/CHANGELOG.md"
+Homepage   = "https://pkg.jf-projects.de/obis-parser"
+Repository = "https://pkg.jf-projects.de/obis-parser"
+Issues     = "https://pkg.jf-projects.de/obis-parser/issues"
+Changelog  = "https://pkg.jf-projects.de/obis-parser/blob/main/CHANGELOG.md"
 
 [tool.hatch.version]
 source = "vcs"
