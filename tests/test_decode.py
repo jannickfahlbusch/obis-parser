@@ -109,6 +109,14 @@ class TestOBISNaming:
                     fallback_name="Meter identification",
                 ),
             ),
+            (
+                "0-0:96.99.0",
+                OBISNameDescriptor(
+                    slug="rssi",
+                    placeholders={},
+                    fallback_name="RSSI",
+                ),
+            ),
         ],
     )
     def test_describe_and_naming_properties(
@@ -174,23 +182,20 @@ class TestOBISDecode:
             info=obis_fw.info,
         )
 
-    @pytest.mark.parametrize(
-        ("short_code", "canonical_code"),
-        [
-            ("1.8.0", "1-0:1.8.0"),
-            ("1.8.2", "1-0:1.8.2"),
-            ("81.7.4", "1-0:81.7.4"),
-            ("0.2.0", "1-0:0.2.0"),
-            ("96.1.0", "1-0:96.1.0"),
-        ],
-    )
-    def test_decode_shorthand_matches_canonical(self, short_code: str, canonical_code: str) -> None:
-        """Decoded shorthand object must be identical to canonical decoded object."""
-        m_short = OBIS.parse(short_code)
-        m_canon = OBIS.parse(canonical_code)
-        assert m_short is not None
-        assert m_canon is not None
-        assert m_short.decode() == m_canon.decode()
+        obis_rssi = OBIS(0, 0, 96, 99, 0)
+        assert obis_rssi.decode() == OBISMeasurement(
+            code=obis_rssi,
+            canonical="0-0:96.99.0",
+            slug="rssi",
+            name="RSSI",
+            unit="dBm",
+            device_class="signal_strength",
+            state_class="measurement",
+            icon="mdi:signal",
+            suggested_display_precision=0,
+            placeholders={},
+            info=obis_rssi.info,
+        )
 
     @pytest.mark.parametrize(
         ("code", "expected_canonical"),

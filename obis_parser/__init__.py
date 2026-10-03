@@ -31,6 +31,7 @@ Usage examples:
 
 from ._version import __version__, __version_tuple__
 from .core import (
+    ABSTRACT_OBJECTS,
     ELECTRICITY_MEDIUM,
     OBIS,
     OBIS_CATALOG,
@@ -50,6 +51,7 @@ from .core import (
 )
 
 __all__ = [
+    "ABSTRACT_OBJECTS",
     "ELECTRICITY_MEDIUM",
     "OBIS",
     "OBIS_CATALOG",

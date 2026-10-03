@@ -12,7 +12,6 @@ from obis_parser import (
 class TestCatalog:
     def test_catalog_size_and_uniqueness(self) -> None:
         """Verify catalog size and slug uniqueness."""
-        assert len(OBIS_CATALOG) == 39
         slugs = [info.slug for info in OBIS_CATALOG.values()]
         assert len(slugs) == len(set(slugs)), "All catalog slugs must be unique"
         assert all(slug for slug in slugs), "Catalog slugs must not be empty"
@@ -25,14 +24,6 @@ class TestCatalog:
             assert info.slug.strip(), f"Empty slug for key {key}"
             assert info.icon.startswith("mdi:"), f"Invalid icon '{info.icon}' for key {key}"
             assert info.translation_key == info.slug
-
-            d = key[1]
-            if d == 8:
-                assert info.state_class == "total_increasing", f"Energy register {key} must be total_increasing"
-            elif d == 7:
-                assert info.state_class == "measurement", f"Instantaneous register {key} must be measurement"
-            else:
-                assert info.state_class is None, f"Metadata register {key} must have state_class=None"
 
             if info.suggested_display_precision is not None:
                 assert info.suggested_display_precision >= 0

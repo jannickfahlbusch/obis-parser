@@ -49,8 +49,13 @@ type OBISDeviceClass = Literal[
     "apparent_power",
     "power_factor",
     "frequency",
+    "signal_strength",
 ]
+
 type OBISStateClass = Literal["measurement", "total_increasing"]
+
+#: Value group A code for abstract objects (IEC 62056-6-1).
+ABSTRACT_OBJECTS = 0
 
 #: Medium code for electricity in the OBIS A field.
 ELECTRICITY_MEDIUM = 1
@@ -186,6 +191,11 @@ class OBIS:
     def is_electricity(self) -> bool:
         """Return True if the code addresses the electricity medium (A=1)."""
         return self.a == ELECTRICITY_MEDIUM
+
+    @property
+    def is_abstract(self) -> bool:
+        """Return True if the code addresses abstract objects (A=0)."""
+        return self.a == ABSTRACT_OBJECTS
 
     @property
     def info(self) -> OBISMeasurementInfo | None:
@@ -532,12 +542,22 @@ OBIS_CATALOG: dict[MeasurementKey, OBISMeasurementInfo] = {
         None,
         "mdi:identifier",
     ),
+    # EMH CASA specific: Cellular Radio Signal
+    (96, 99, 0): OBISMeasurementInfo(
+        "RSSI",
+        "rssi",
+        "signal_strength",
+        "measurement",
+        "dBm",
+        "mdi:signal",
+        0,
+    ),
 }
 
 
 def _get_obis_info(obis: OBIS) -> OBISMeasurementInfo | None:
     """Look up measurement metadata from the catalog by (C, D, E) or (C, D)."""
-    if not obis.is_electricity:
+    if not (obis.is_electricity or obis.is_abstract):
         return None
 
     if obis.f is not None and obis.f not in _CURRENT_PERIOD_F:

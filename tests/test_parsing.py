@@ -21,6 +21,7 @@ class TestParseObis:
             ("1-0:1.8.1", OBIS(1, 0, 1, 8, 1, None)),
             ("1-2:1.8.3", OBIS(1, 2, 1, 8, 3, None)),
             ("1-12:1.8.128*50", OBIS(1, 12, 1, 8, 128, 50)),
+            ("0-0:96.99.0", OBIS(0, 0, 96, 99, 0, None)),
             # Shorthand 3-group notation (defaults to A=1, B=0)
             ("1.8.0", OBIS(1, 0, 1, 8, 0, None)),
             ("1.8.0*255", OBIS(1, 0, 1, 8, 0, 255)),
@@ -119,6 +120,7 @@ class TestOBISProperties:
         """Verify property aliases mirror positional fields."""
         obis = OBIS(1, 2, 3, 4, 5, 6)
         assert obis.is_electricity is True
+        assert obis.is_abstract is False
         assert (
             (
                 obis.medium,
@@ -132,8 +134,14 @@ class TestOBISProperties:
             == (1, 2, 3, 4, 5, 6)
         )
 
+        abstract = OBIS(0, 0, 96, 99, 0, None)
+        assert abstract.is_abstract is True
+        assert abstract.is_electricity is False
+        assert abstract.medium == abstract.a == 0
+
         gas = OBIS(7, 0, 3, 0, 0, None)
         assert gas.is_electricity is False
+        assert gas.is_abstract is False
         assert gas.medium == gas.a == 7
 
     def test_obis_dataclass_immutability_and_hashability(self) -> None:
