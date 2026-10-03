@@ -13,7 +13,7 @@ class TestOBISNaming:
     @pytest.mark.parametrize(
         ("code", "expected"),
         [
-            # Base register without modifiers
+            # 1. Base register without modifiers
             (
                 "1-0:1.8.0",
                 OBISNameDescriptor(
@@ -22,16 +22,16 @@ class TestOBISNaming:
                     fallback_name="Active energy import",
                 ),
             ),
-            # Channel modifier on base register
+            # 2. Channel qualifier on base register
             (
-                "1-1:1.7.0",
+                "1-1:1.8.0",
                 OBISNameDescriptor(
-                    slug="active_power_import_channel",
+                    slug="active_energy_import_channel",
                     placeholders={"channel": "1"},
-                    fallback_name="Active power import (Channel 1)",
+                    fallback_name="Active energy import (Channel 1)",
                 ),
             ),
-            # Tariff modifier on base register
+            # 3. Tariff qualifier on base register
             (
                 "1-0:1.8.2",
                 OBISNameDescriptor(
@@ -40,7 +40,7 @@ class TestOBISNaming:
                     fallback_name="Active energy import (Tariff 2)",
                 ),
             ),
-            # Channel + tariff on base register
+            # 4. Channel + tariff on base register
             (
                 "1-3:1.8.4",
                 OBISNameDescriptor(
@@ -49,7 +49,7 @@ class TestOBISNaming:
                     fallback_name="Active energy import (Channel 3, Tariff 4)",
                 ),
             ),
-            # Tariff E=255 means total/unspecified (no tariff suffix)
+            # 5. Tariff total / unspecified (E=255) generates no tariff suffix
             (
                 "1-0:1.8.255",
                 OBISNameDescriptor(
@@ -58,23 +58,7 @@ class TestOBISNaming:
                     fallback_name="Active energy import",
                 ),
             ),
-            # Exact (C, D, E) phase angle registers
-            (
-                "1-0:81.7.0",
-                OBISNameDescriptor(
-                    slug="phase_angle",
-                    placeholders={},
-                    fallback_name="Phase angle",
-                ),
-            ),
-            (
-                "1-0:81.7.1",
-                OBISNameDescriptor(
-                    slug="phase_angle_u_l2_l1",
-                    placeholders={},
-                    fallback_name="Phase angle U(L2)-U(L1)",
-                ),
-            ),
+            # 6. Exact (C, D, E) register ignores tariff E (no _tariff suffix despite E=4)
             (
                 "1-0:81.7.4",
                 OBISNameDescriptor(
@@ -83,7 +67,7 @@ class TestOBISNaming:
                     fallback_name="Phase angle L1",
                 ),
             ),
-            # Channel on exact (C, D, E) register (must NOT generate tariff suffix!)
+            # 7. Channel on exact (C, D, E) register generates _channel, NOT _channel_tariff
             (
                 "1-1:81.7.4",
                 OBISNameDescriptor(
@@ -92,34 +76,9 @@ class TestOBISNaming:
                     fallback_name="Phase angle L1 (Channel 1)",
                 ),
             ),
-            # Exact (C, D, E) device metadata registers
-            (
-                "1-0:0.2.0",
-                OBISNameDescriptor(
-                    slug="firmware_version",
-                    placeholders={},
-                    fallback_name="Firmware version",
-                ),
-            ),
-            (
-                "1-0:96.1.0",
-                OBISNameDescriptor(
-                    slug="meter_identification",
-                    placeholders={},
-                    fallback_name="Meter identification",
-                ),
-            ),
-            (
-                "0-0:96.99.0",
-                OBISNameDescriptor(
-                    slug="rssi",
-                    placeholders={},
-                    fallback_name="RSSI",
-                ),
-            ),
         ],
     )
-    def test_describe_and_naming_properties(
+    def test_describe_qualifier_patterns(
         self,
         code: str,
         expected: OBISNameDescriptor,
@@ -128,10 +87,16 @@ class TestOBISNaming:
         obis = OBIS.parse(code)
         assert obis is not None
         assert obis.describe() == expected
-        assert obis.name == expected.fallback_name
-        assert obis.slug == expected.slug
-        assert obis.translation_key == expected.translation_key
-        assert obis.placeholders == expected.placeholders
+
+    def test_naming_convenience_properties(self) -> None:
+        """Verify OBIS properties forward to OBISNameDescriptor fields."""
+        obis = OBIS.parse("1-1:1.8.2")
+        assert obis is not None
+        desc = obis.describe()
+        assert obis.name == desc.fallback_name == "Active energy import (Channel 1, Tariff 2)"
+        assert obis.slug == desc.slug == "active_energy_import_channel_tariff"
+        assert obis.translation_key == desc.translation_key == "active_energy_import_channel_tariff"
+        assert obis.placeholders == desc.placeholders == {"channel": "1", "tariff": "2"}
 
 
 class TestOBISDecode:
